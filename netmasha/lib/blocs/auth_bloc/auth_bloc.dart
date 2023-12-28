@@ -6,87 +6,92 @@ import 'package:netmasha/blocs/auth_bloc/auth_state.dart';
 import 'package:netmasha/prefrences/shared_prefrences.dart';
 
 class AuthBloc extends Bloc<AuthEvent, AuthState> {
-  final SharedPref _sharedPref = SharedPref();
+  late final SharedPref _sharedPref;
 
   AuthBloc() : super(AuthInitial()) {
-    _sharedPref.initializePref();
+    _initializeSharedPref();
+    on<AuthLoginEvent>(_onAuthLoginEvent);
+    on<AuthRegisterEvent>(_onAuthRegisterEvent);
+    on<OTPEvent>(_onOTPEvent);
+    on<AuthLogoutEvent>(_onAuthLogoutEvent);
+  }
 
-    on<AuthLoginEvent>((event, emit) async {
-      emit(LoadingState(isLoading: true));
+  void _initializeSharedPref() async {
+    _sharedPref = await SharedPref.getInstance();
+  }
 
-      if (event.email.isNotEmpty && event.password.isNotEmpty) {
-        final response = await Auth().postLogin(
-            {"email": event.email.trim(), "password": event.password.trim()});
-        if (event.email.trim().isEmpty) {
-          emit(AuthLoginErrorState(errorMsg: "Please Enter Your Email"));
-          emit(LoadingState(isLoading: false));
-        } else if (event.password.isEmpty) {
-          emit(LoadingState(isLoading: false));
-          emit(AuthLoginErrorState(errorMsg: "Please Enter Your Password"));
-        } else if (response.statusCode == 200) {
-          emit(LoadingState(isLoading: false));
-          final responseBody = json.decode(response.body);
-          final token = responseBody['token'] as String;
-          _sharedPref.setToken(token);
-          emit(AuthLoginSuccessState(type: "login", email: event.email.trim()));
-        } else {
-          emit(LoadingState(isLoading: false));
-          emit(
-              AuthLoginErrorState(errorMsg: "Email or Password are incorrect"));
-        }
+  Future<void> _onAuthLoginEvent(
+      AuthLoginEvent event, Emitter<AuthState> emit) async {
+    emit(LoadingState(isLoading: true));
+
+    if (event.email.isNotEmpty && event.password.isNotEmpty) {
+      final response = await Auth().postLogin(
+          {"email": event.email.trim(), "password": event.password.trim()});
+
+      if (response.statusCode == 200) {
+        final responseBody = json.decode(response.body);
+        final token = responseBody['token'] as String;
+        await _sharedPref.setToken(token);
+        emit(AuthLoginSuccessState(type: "login", email: event.email.trim()));
       } else {
-        emit(AuthLoginErrorState(errorMsg: 'Please Fill The Required Fields'));
+        emit(AuthLoginErrorState(errorMsg: "Email or Password are incorrect"));
       }
-    });
+    } else {
+      emit(AuthLoginErrorState(errorMsg: 'Please Fill The Required Fields'));
+    }
+    emit(LoadingState(isLoading: false));
+  }
 
-    on<AuthRegisterEvent>((event, emit) async {
-      emit(LoadingState(isLoading: true));
+  Future<void> _onAuthRegisterEvent(
+      AuthRegisterEvent event, Emitter<AuthState> emit) async {
+    emit(LoadingState(isLoading: true));
 
-      if (event.email.isNotEmpty &&
-          event.password.isNotEmpty &&
-          event.name.isNotEmpty) {
-        emit(LoadingState(isLoading: true));
+    if (event.email.isNotEmpty &&
+        event.password.isNotEmpty &&
+        event.name.isNotEmpty) {
+      final response = await Auth().postRegistration({
+        "name": event.name,
+        "email": event.email,
+        "password": event.password,
+        "phone": event.phone,
+      });
 
-        final response = await Auth().postRegistration({
-          "name": event.name,
-          "email": event.email,
-          "password": event.password,
-          "phone": event.phone,
-        });
-
-        if (response.statusCode == 200) {
-          emit(LoadingState(isLoading: false));
-          emit(AuthRegisterSuccessState(
-              email: event.email, type: 'registration'));
-        } else {
-          emit(LoadingState(isLoading: false));
-          emit(AuthRegisterErrorState(errorMsg: response.body));
-        }
+      if (response.statusCode == 200) {
+        emit(
+            AuthRegisterSuccessState(email: event.email, type: 'registration'));
       } else {
-        emit(AuthRegisterErrorState(
-            errorMsg: 'Please Fill The Required Fields'));
+        emit(AuthRegisterErrorState(errorMsg: response.body));
       }
-    });
+    } else {
+      emit(AuthRegisterErrorState(errorMsg: 'Please Fill The Required Fields'));
+    }
+    emit(LoadingState(isLoading: false));
+  }
 
-    on<OTPEvent>((event, emit) async {
-      emit(LoadingState(isLoading: true));
-      if (event.otpCode.length < 6) {
-        emit(AuthOTPErrorState(errorMsg: "Please Enter OTP"));
-        emit(LoadingState(isLoading: false));
+  Future<void> _onOTPEvent(OTPEvent event, Emitter<AuthState> emit) async {
+    emit(LoadingState(isLoading: true));
+
+    if (event.otpCode.length >= 6) {
+      final response = await Auth()
+          .postVerification({"otp": event.otpCode, "email": event.email});
+
+      if (response.statusCode == 200) {
+        final responseBody = json.decode(response.body);
+        final token = responseBody['token'] as String;
+        await _sharedPref.setToken(token);
+        emit(AuthOTPSuccessState());
       } else {
-        final response = await Auth()
-            .postVerification({"otp": event.otpCode, "email": event.email});
-        if (response.statusCode == 200) {
-          final responseBody = json.decode(response.body);
-          final token = responseBody['token'] as String;
-          _sharedPref.setToken(token);
-          emit(LoadingState(isLoading: false));
-          emit(AuthOTPSuccessState());
-        } else {
-          emit(AuthOTPErrorState(errorMsg: "Wrong OTP $response"));
-          emit(LoadingState(isLoading: false));
-        }
+        emit(AuthOTPErrorState(errorMsg: "Wrong OTP $response"));
       }
-    });
+    } else {
+      emit(AuthOTPErrorState(errorMsg: "Please Enter OTP"));
+    }
+    emit(LoadingState(isLoading: false));
+  }
+
+  Future<void> _onAuthLogoutEvent(
+      AuthLogoutEvent event, Emitter<AuthState> emit) async {
+    await _sharedPref.cleanToken();
+    emit(AuthLoggedOutState());
   }
 }

@@ -2,7 +2,6 @@ abstract class AuthState {}
 
 class AuthInitial extends AuthState {}
 
-
 //=========== errors ===>
 class AuthLoginErrorState extends AuthState {
   final String errorMsg;
@@ -41,6 +40,6 @@ class LoadingState extends AuthState {
   LoadingState({required this.isLoading});
 }
 
-
-
 class OTPState extends AuthState {}
+
+class AuthLoggedOutState extends AuthState {}

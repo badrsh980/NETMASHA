@@ -5,6 +5,8 @@ class AuthLoginEvent extends AuthEvent {
   AuthLoginEvent({required this.email, required this.password});
 }
 
+class AuthLogoutEvent extends AuthEvent {}
+
 class AuthRegisterEvent extends AuthEvent {
   final String email, password, name, phone, confirmPassword;
   AuthRegisterEvent({

@@ -20,9 +20,7 @@ class LoginScreen extends StatelessWidget {
         if (state is AuthLoginSuccessState) {
           Navigator.pushAndRemoveUntil(
             context,
-            MaterialPageRoute(
-                builder: (context) =>
-                    NavBar()), // Replace with your actual NavBar screen
+            MaterialPageRoute(builder: (context) => NavBar()),
             (route) => false,
           );
         } else if (state is AuthLoginErrorState) {

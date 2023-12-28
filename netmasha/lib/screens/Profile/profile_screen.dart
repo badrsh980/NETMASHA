@@ -1,7 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:netmasha/blocs/auth_bloc/auth_bloc.dart';
+import 'package:netmasha/blocs/auth_bloc/auth_event.dart';
+import 'package:netmasha/prefrences/shared_prefrences.dart';
 import 'package:netmasha/screens/Profile/edit_proflie.dart';
 import 'package:netmasha/screens/Profile/favorite_page.dart';
 import 'package:netmasha/screens/Profile/provider_info.dart';
+import 'package:netmasha/screens/login_screen.dart';
 import 'package:netmasha/styles/colors.dart';
 import 'package:netmasha/widgets/buttons.dart';
 import 'package:netmasha/widgets/profile_page/profile_containers.dart';
@@ -146,7 +151,21 @@ class ProfileScreen extends StatelessWidget {
                                           const SizedBox(width: 40),
                                           Button(
                                             txt: 'نعم',
-                                            onTap: () {},
+                                            onTap: () async {
+                                              final sharedPref =
+                                                  await SharedPref
+                                                      .getInstance();
+
+                                              await sharedPref.cleanToken();
+
+                                              Navigator.of(context)
+                                                  .pushAndRemoveUntil(
+                                                MaterialPageRoute(
+                                                    builder: (context) =>
+                                                        LoginScreen()),
+                                                (Route<dynamic> route) => false,
+                                              );
+                                            },
                                             isBigButten: false,
                                           ),
                                         ],
@@ -203,7 +222,10 @@ class ProfileScreen extends StatelessWidget {
                                           const SizedBox(width: 40),
                                           Button(
                                             txt: 'نعم',
-                                            onTap: () {},
+                                            onTap: () {
+                                              BlocProvider.of<AuthBloc>(context)
+                                                  .add(AuthLogoutEvent());
+                                            },
                                             isBigButten: false,
                                           ),
                                         ],
